@@ -1,11 +1,12 @@
 package tcp
 
 import (
+	"fmt"
 	"net"
 )
 
 type Socket struct {
-	SID string
+	Id string
 
 	Conn *net.TCPConn
 }
@@ -19,6 +20,11 @@ type TCP struct {
 
 	// 客户端链接数组
 	Connections map[string]*Socket
+
+	/*
+		// 全局消息队列
+		MessageQueue [][]byte
+	*/
 }
 
 func Create(listen_addr string) (*TCP, error) {
@@ -33,28 +39,33 @@ func Create(listen_addr string) (*TCP, error) {
 	}
 
 	tcp := TCP{
-		addr:     tcp_addr,
-		listener: tcp_listener,
+		Addr:     tcp_addr,
+		Listener: tcp_listener,
 	}
 
 	return &tcp, nil
 }
 
 func (this *TCP) AddConn(conn *net.TCPConn) {
+	// TODO: session_id(uuid)
 	socket := Socket{
-		SID:  "",
+		Id:   "",
 		Conn: conn,
 	}
 
 	this.Connections[socket.SID] = &socket
 
 	var buffer = make([]byte, 1024)
+	var err error
+	var n int
 	for {
-		n, err := conn.Read(buffer)
+		n, err = conn.Read(buffer)
 		if err != nil {
 			conn.Close()
 			return
 		}
 
+		DataFilter(socket.Id, buffer[:n], n)
+		buffer = buffer[:0]
 	}
 }
